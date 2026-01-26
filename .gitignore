@@ -1,0 +1,10 @@
+# MyST build outputs
+_build
+
+# Python ignore
+__pycache__
+.coverage
+
+
+# requests_cache db
+.schema_cache.sqlite

@@ -1,0 +1,5 @@
+@prefix schema1: <http://schema.org/> .
+
+[] a schema1:Person ;
+    schema1:name "Jane Doe" .
+
