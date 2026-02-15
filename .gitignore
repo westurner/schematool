@@ -7,7 +7,9 @@ __pycache__
 
 
 # requests_cache db
-.schema_cache.sqlite# Byte-compiled / optimized / DLL files
+.schema_cache.sqlite
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
