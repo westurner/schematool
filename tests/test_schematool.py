@@ -392,12 +392,20 @@ def test_main_call():
     env = os.environ.copy()
     env["PYTHONPATH"] = os.getcwd() + ":" + env.get("PYTHONPATH", "")
 
+    # Locate schematool.py relative to this test file
+    # This file is in src/schematool/tests/, so we go up one level to src/schematool/
+    # and then down to schematool/schematool.py
+    base_dir = Path(__file__).resolve().parent.parent
+    script_path = base_dir / "schematool" / "schematool.py"
+
     # Run with --help to verify main() can be called
     result = subprocess.run(
-        [sys.executable, "schematool/schematool.py", "--help"], capture_output=True, env=env
+        [sys.executable, str(script_path), "--help"], capture_output=True, env=env
     )
+    # Check if the process ran successfully
     assert result.returncode == 0
     assert b"transitive" in result.stdout
+
 
 
 def test_main_empty_inventory(tmp_path, monkeypatch, caplog):
@@ -908,17 +916,24 @@ def test_transform_rdf_none_format(tmp_path):
 def test_run_as_script(tmp_path, monkeypatch):
     # This targets line 607: if __name__ == "__main__": main()
     # We need to mock sys.argv and call run_path
+    
+    # Locate schematool.py relative to this test file
+    # tests/test_schematool.py -> tests/../schematool/schematool.py
+    base_dir = Path(__file__).resolve().parent.parent
+    script_path = base_dir / "schematool" / "schematool.py"
 
     inventory_file = tmp_path / "inv.json"
     inventory_file.write_text("{}")
 
+    # Mock sys.argv as if the script was run with arguments
     monkeypatch.setattr(
-        "sys.argv", ["schematool/schematool.py", "--schema-inventory", str(inventory_file)]
+        "sys.argv", [str(script_path), "--schema-inventory", str(inventory_file)]
     )
-    monkeypatch.setattr("schematool.schematool.setup_cache", lambda x: None)
+    # Monkeypatch setup_logging to avoid polluting stdout
+    monkeypatch.setattr("schematool.schematool.setup_logging", lambda x: None)
 
     # Use runpy to execute the file as __main__
-    runpy.run_path("schematool/schematool.py", run_name="__main__")
+    runpy.run_path(str(script_path), run_name="__main__")
 
 
 
