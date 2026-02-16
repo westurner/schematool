@@ -1,6 +1,7 @@
 """
 Docstring for schematool.tests.test_schematool
 """
+
 import json
 import os
 import pytest
@@ -74,7 +75,9 @@ def test_download_and_convert_exception(tmp_path):
         "redirected_to": "http://example.org/dir.ttl",
     }
     # This should trigger the except Exception: pass and proceed to fetch
-    assert not download_and_convert("test", "http://example.org/dir.ttl", source_dir, tmp_path)
+    assert not download_and_convert(
+        "test", "http://example.org/dir.ttl", source_dir, tmp_path
+    )
 
 
 def test_download_and_convert_existing_not_html(tmp_path):
@@ -89,7 +92,9 @@ def test_download_and_convert_existing_not_html(tmp_path):
         "redirected_to": "http://example.org/already.ttl",
     }
     # Hits the logic that checks if existing file is NOT HTML
-    assert download_and_convert("already", "http://example.org/already.ttl", source, tmp_path)
+    assert download_and_convert(
+        "already", "http://example.org/already.ttl", source, tmp_path
+    )
 
 
 @responses.activate
@@ -151,7 +156,9 @@ def test_download_and_convert_jsonld(tmp_path):
         content_type="application/ld+json",
     )
 
-    success = download_and_convert("testjsonld", url, {"path": "testjsonld/test.ttl"}, tmp_path)
+    success = download_and_convert(
+        "testjsonld", url, {"path": "testjsonld/test.ttl"}, tmp_path
+    )
     assert success
     assert (tmp_path / "testjsonld/test.jsonld").exists()
     assert (tmp_path / "testjsonld/test.ttl").exists()
@@ -178,7 +185,9 @@ def test_download_and_convert_purl(tmp_path):
     # responses with status=200 will just return that.
     # To test the hint-follow, we might need more complex mock.
 
-    success = download_and_convert("purltest", purl_url, {"path": "purl/test.ttl"}, tmp_path)
+    success = download_and_convert(
+        "purltest", purl_url, {"path": "purl/test.ttl"}, tmp_path
+    )
     assert success
     assert (tmp_path / "purl/test.ttl").exists()
 
@@ -200,7 +209,9 @@ def test_download_and_convert_purl_hint_success(tmp_path):
         content_type="text/turtle",
     )
 
-    success = download_and_convert("purl_hint", purl_url, {"path": "purl_hint.ttl"}, tmp_path)
+    success = download_and_convert(
+        "purl_hint", purl_url, {"path": "purl_hint.ttl"}, tmp_path
+    )
     assert success
 
 
@@ -238,7 +249,9 @@ def test_download_and_convert_xml(tmp_path):
         responses.GET, url, body=rdf_xml, status=200, content_type="application/rdf+xml"
     )
 
-    success = download_and_convert("testxml", url, {"path": "testxml/testxml.ttl"}, tmp_path)
+    success = download_and_convert(
+        "testxml", url, {"path": "testxml/testxml.ttl"}, tmp_path
+    )
     assert success
     assert (tmp_path / "testxml/testxml.rdf").exists()
     assert (tmp_path / "testxml/testxml.ttl").exists()
@@ -264,13 +277,15 @@ def test_get_dependencies_exception(tmp_path, monkeypatch):
 
 def test_get_dependencies_for_file(tmp_path):
     test_ttl = tmp_path / "test.ttl"
-    test_ttl.write_text("""
+    test_ttl.write_text(
+        """
         @prefix brick: <https://brickschema.org/schema/Brick#> .
         @prefix iof: <https://spec.industrialontologies.org/ontology/core/Core/> .
         @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-        
+
         <http://example.org/s> a brick:Point .
-    """)
+    """
+    )
 
     deps = get_dependencies_for_file(test_ttl)
     assert "brick" in deps
@@ -405,7 +420,6 @@ def test_main_call():
     # Check if the process ran successfully
     assert result.returncode == 0
     assert b"transitive" in result.stdout
-
 
 
 def test_main_empty_inventory(tmp_path, monkeypatch, caplog):
@@ -916,7 +930,7 @@ def test_transform_rdf_none_format(tmp_path):
 def test_run_as_script(tmp_path, monkeypatch):
     # This targets line 607: if __name__ == "__main__": main()
     # We need to mock sys.argv and call run_path
-    
+
     # Locate schematool.py relative to this test file
     # tests/test_schematool.py -> tests/../schematool/schematool.py
     base_dir = Path(__file__).resolve().parent.parent
@@ -934,7 +948,6 @@ def test_run_as_script(tmp_path, monkeypatch):
 
     # Use runpy to execute the file as __main__
     runpy.run_path(str(script_path), run_name="__main__")
-
 
 
 def test_pyoxigraph_import_error(monkeypatch):

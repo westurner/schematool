@@ -1,6 +1,5 @@
 import argparse
 import pytest
-import tempfile
 import json
 from pathlib import Path
 from unittest.mock import patch, MagicMock
