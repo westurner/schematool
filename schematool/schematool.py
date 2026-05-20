@@ -354,6 +354,11 @@ def recursive_sync(
 
         any_success = False
         for source in info["sources"]:
+            if source.get("generated"):
+                # Generated sources are locally created, no need to redownload
+                if (schema_dir / source["path"]).exists():
+                    any_success = True
+                continue
             success = download_and_convert(
                 prefix, url, source, schema_dir, reason=reason
             )
@@ -365,7 +370,8 @@ def recursive_sync(
 
         # Ensure all target formats are present via local transformation if official source is missing
         existing_exts = {
-            Path(s["path"]).suffix for s in info["sources"] if s.get("path")
+            Path(s["path"]).suffix for s in info["sources"] 
+            if s.get("path") and (schema_dir / s["path"]).exists() and (schema_dir / s["path"]).stat().st_size > 0
         }
 
         # Find a good source to use as a seed for conversion
