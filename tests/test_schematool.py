@@ -1015,3 +1015,29 @@ def test_generate_ctags_integration(tmp_path):
         assert "dummy_schema.py" in content
     finally:
         os.chdir(cwd)
+
+def test_transform_rdf_stripped_jsonld(tmp_path):
+    from schematool.schematool import transform_rdf
+    import json
+
+    input_ttl = tmp_path / "input.ttl"
+    input_ttl.write_text("""@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex: <http://example.org/> .
+@prefix iof-av: <https://spec.industrialontologies.org/ontology/annotation/> .
+@prefix fibo: <https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/> .
+
+ex:s rdfs:isDefinedBy <http://example.org/test> ;
+     iof-av:adaptedFrom "test2" ;
+     fibo:adaptedFrom "test3" ;
+     ex:other "keep" .
+""")
+
+    output_jsonld = tmp_path / "output.stripped.jsonld"
+    success = transform_rdf(input_ttl, output_jsonld, "stripped_jsonld", use_pyoxigraph=False)
+    assert success
+    assert output_jsonld.exists()
+
+    text = output_jsonld.read_text()
+    assert "isDefinedBy" not in text
+    assert "adaptedFrom" not in text
+    assert "keep" in text

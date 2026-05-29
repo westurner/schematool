@@ -110,7 +110,7 @@ def save_inventory(path, inventory):
         logger.error(f"Failed to save inventory to {path}: {e}")
 
 
-def transform_rdf(input_path, output_path, target_format, use_pyoxigraph=False):
+def transform_rdf(input_path, output_path, target_format, use_pyoxigraph=False, extra_prefixes=None):
     """Transform RDF from one format to another."""
     rdflib_map = {"ttl": "turtle", "rdfxml": "xml", "jsonld": "json-ld"}
 
@@ -149,6 +149,27 @@ def transform_rdf(input_path, output_path, target_format, use_pyoxigraph=False):
     try:
         g = Graph()
         g.parse(str(input_path))
+        
+        # Bind additional prefixes from inventory to assist rdflib's strict QName splitting 
+        # which otherwise fails on local names containing slashes.
+        from rdflib import Namespace
+        if extra_prefixes:
+            for pfx, uri in extra_prefixes.items():
+                g.bind(pfx, Namespace(uri))
+
+        if target_format == "compacted_jsonld" or target_format == "stripped_jsonld":
+            if target_format == "stripped_jsonld":
+                from rdflib import URIRef
+                g.remove((None, URIRef("http://www.w3.org/2000/01/rdf-schema#isDefinedBy"), None))
+                g.remove((None, URIRef("https://spec.industrialontologies.org/ontology/annotation/adaptedFrom"), None))
+                g.remove((None, URIRef("https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/adaptedFrom"), None))
+            g.serialize(
+                destination=str(output_path),
+                format="json-ld",
+                context={ (k if k else "@vocab"): str(v) for k, v in g.namespaces() },
+            )
+            return True
+            
         output_format = rdflib_map.get(target_format, target_format)
         if output_format:
             g.serialize(destination=str(output_path), format=output_format)
@@ -159,7 +180,7 @@ def transform_rdf(input_path, output_path, target_format, use_pyoxigraph=False):
         return False
 
 
-def download_and_convert(prefix, base_url, source, schema_dir, reason="User requested"):
+def download_and_convert(prefix, base_url, source, schema_dir, reason="User requested", extra_prefixes=None):
     """
     Download a single source and convert it to Turtle if needed.
     'source' is a dict that MUST contain 'path' and may contain 'url', 'req_headers', etc.
@@ -320,9 +341,17 @@ def recursive_sync(
     if visited_urls is None:
         visited_urls = set()
 
-    target_formats = kwargs.get("target_formats", ["ttl", "rdfxml", "jsonld"])
+    target_formats = kwargs.get(
+        "target_formats", ["ttl", "rdfxml", "jsonld", "compacted_jsonld", "stripped_jsonld"]
+    )
     use_pyoxigraph = kwargs.get("use_pyoxigraph", False)
-    fmt_to_ext = {"ttl": ".ttl", "rdfxml": ".rdf", "jsonld": ".jsonld"}
+    fmt_to_ext = {
+        "ttl": ".ttl",
+        "rdfxml": ".rdf",
+        "jsonld": ".jsonld",
+        "compacted_jsonld": ".compacted.jsonld",
+        "stripped_jsonld": ".stripped.jsonld",
+    }
 
     for prefix, info in list(inventory_node.items()):
         url = info["url"]
@@ -353,6 +382,7 @@ def recursive_sync(
         )
 
         any_success = False
+        extra_prefixes = info.get("extra_prefixes")
         for source in info["sources"]:
             if source.get("generated"):
                 # Generated sources are locally created, no need to redownload
@@ -360,7 +390,7 @@ def recursive_sync(
                     any_success = True
                 continue
             success = download_and_convert(
-                prefix, url, source, schema_dir, reason=reason
+                prefix, url, source, schema_dir, reason=reason, extra_prefixes=extra_prefixes
             )
             if success:
                 any_success = True
@@ -399,6 +429,7 @@ def recursive_sync(
                         schema_dir / new_path,
                         fmt,
                         use_pyoxigraph,
+                        extra_prefixes=extra_prefixes
                     ):
                         info["sources"].append(
                             {"path": str(new_path), "format": fmt, "generated": True}
@@ -930,8 +961,8 @@ def main():
     parser.add_argument(
         "--target-formats",
         nargs="+",
-        default=["ttl", "rdfxml", "jsonld"],
-        help="Target formats to attempt to make present locally (default: ttl rdfxml jsonld)",
+        default=["ttl", "rdfxml", "jsonld", "compacted_jsonld"],
+        help="Target formats to attempt to make present locally (default: ttl rdfxml jsonld compacted_jsonld)",
     )
     parser.add_argument(
         "--use-pyoxigraph",
