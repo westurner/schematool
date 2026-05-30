@@ -563,6 +563,41 @@ def test_recursive_sync_no_any_success(tmp_path):
     assert inventory["fail"]["sources"][0].get("format") is None
 
 
+def test_recursive_sync_compacted_jsonld_not_duplicated(tmp_path, monkeypatch):
+    from schematool.schematool import recursive_sync
+
+    schema_path = tmp_path / "dcat"
+    schema_path.mkdir()
+    compacted = schema_path / "dcat.compacted.jsonld"
+    compacted.write_text('{"@context": {}, "@graph": []}')
+
+    transform_calls = 0
+
+    def mock_transform(*args, **kwargs):
+        nonlocal transform_calls
+        transform_calls += 1
+        return True
+
+    monkeypatch.setattr("schematool.schematool.transform_rdf", mock_transform)
+    monkeypatch.setattr("schematool.schematool.get_dependencies_for_file", lambda p: {})
+
+    inventory = {
+        "dcat": {
+            "url": "http://example.org/dcat#",
+            "sources": [
+                {"path": "dcat/dcat.compacted.jsonld", "generated": True},
+            ],
+        }
+    }
+
+    recursive_sync(inventory, tmp_path, max_depth=0, target_formats=["compacted_jsonld"])
+    recursive_sync(inventory, tmp_path, max_depth=0, target_formats=["compacted_jsonld"])
+
+    assert transform_calls == 0
+    paths = [s["path"] for s in inventory["dcat"]["sources"]]
+    assert paths == ["dcat/dcat.compacted.jsonld"]
+
+
 @pytest.mark.skip("slow")
 def test_recursive_sync_with_generation(tmp_path):
     from schematool.schematool import recursive_sync
@@ -612,6 +647,25 @@ def test_render_hierarchy_legacy():
     lines = render_hierarchy(inventory)
     assert "**legacy**" in lines[0]
     assert "Local: `legacy.ttl`" in lines[0]
+
+
+def test_render_hierarchy_dedupes_local_paths():
+    from schematool.schematool import render_hierarchy
+
+    inventory = {
+        "dcat": {
+            "url": "http://example.org/dcat#",
+            "sources": [
+                {"path": "dcat/dcat.ttl"},
+                {"path": "dcat/dcat.compacted.jsonld"},
+                {"path": "dcat/dcat.compacted.jsonld"},
+            ],
+        }
+    }
+
+    lines = render_hierarchy(inventory)
+    assert len(lines) == 1
+    assert lines[0].count("dcat/dcat.compacted.jsonld") == 1
 
 
 def test_save_inventory(tmp_path):

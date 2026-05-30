@@ -326,6 +326,34 @@ def get_dependencies_for_file(file_path):
     return deps
 
 
+def get_source_extension(path):
+    """Return a canonical extension for schema sources, including compound JSON-LD suffixes."""
+    name = Path(path).name
+    if name.endswith(".compacted.jsonld"):
+        return ".compacted.jsonld"
+    if name.endswith(".stripped.jsonld"):
+        return ".stripped.jsonld"
+    return Path(path).suffix
+
+
+def dedupe_sources_by_path(sources):
+    """Drop duplicate source entries by path while preserving order."""
+    deduped = []
+    seen_paths = set()
+
+    for source in sources:
+        path = source.get("path")
+        if not path:
+            deduped.append(source)
+            continue
+        if path in seen_paths:
+            continue
+        seen_paths.add(path)
+        deduped.append(source)
+
+    return deduped
+
+
 def recursive_sync(
     inventory_node,
     schema_dir,
@@ -371,6 +399,8 @@ def recursive_sync(
             if "path" in info:
                 del info["path"]
 
+        info["sources"] = dedupe_sources_by_path(info["sources"])
+
         if url in visited_urls:
             continue
         visited_urls.add(url)
@@ -400,9 +430,13 @@ def recursive_sync(
 
         # Ensure all target formats are present via local transformation if official source is missing
         existing_exts = {
-            Path(s["path"]).suffix for s in info["sources"] 
-            if s.get("path") and (schema_dir / s["path"]).exists() and (schema_dir / s["path"]).stat().st_size > 0
+            get_source_extension(s["path"])
+            for s in info["sources"]
+            if s.get("path")
+            and (schema_dir / s["path"]).exists()
+            and (schema_dir / s["path"]).stat().st_size > 0
         }
+        existing_paths = {s["path"] for s in info["sources"] if s.get("path")}
 
         # Find a good source to use as a seed for conversion
         seed_source = None
@@ -431,9 +465,11 @@ def recursive_sync(
                         use_pyoxigraph,
                         extra_prefixes=extra_prefixes
                     ):
-                        info["sources"].append(
-                            {"path": str(new_path), "format": fmt, "generated": True}
-                        )
+                        if str(new_path) not in existing_paths:
+                            info["sources"].append(
+                                {"path": str(new_path), "format": fmt, "generated": True}
+                            )
+                            existing_paths.add(str(new_path))
                         existing_exts.add(ext)
 
         if "dependencies" not in info:
@@ -478,7 +514,14 @@ def render_hierarchy(node, indent=0):
 
         # Handle new sources structure vs legacy path
         if "sources" in info and info["sources"]:
-            paths = [s["path"] for s in info["sources"]]
+            paths = []
+            seen_paths = set()
+            for source in info["sources"]:
+                path = source.get("path")
+                if not path or path in seen_paths:
+                    continue
+                seen_paths.add(path)
+                paths.append(path)
             local = ", ".join([f"`{p}`" for p in paths])
         else:
             local = f"`{info.get('path', 'unknown')}`"
