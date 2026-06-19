@@ -393,6 +393,8 @@ def test_main(tmp_path, monkeypatch):
                 str(schema_dir),
                 "--docs-vis-path",
                 str(docs_vis),
+                "--generate-python",
+                str(tmp_path / "schema.py"),
                 "--max-depth",
                 "1",
             ]
@@ -997,7 +999,14 @@ def test_run_as_script(tmp_path, monkeypatch):
 
     # Mock sys.argv as if the script was run with arguments
     monkeypatch.setattr(
-        "sys.argv", [str(script_path), "--schema-inventory", str(inventory_file)]
+        "sys.argv",
+        [
+            str(script_path),
+            "--schema-inventory",
+            str(inventory_file),
+            "--generate-python",
+            str(tmp_path / "schema.py"),
+        ],
     )
     # Monkeypatch setup_logging to avoid polluting stdout
     monkeypatch.setattr("schematool.schematool.setup_logging", lambda x: None)

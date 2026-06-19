@@ -18,7 +18,9 @@ def mock_args():
     args.use_pyoxigraph = False
     args.cache_path = Path("cache.sqlite")
     args.log_file = Path("schematool.log")
-    args.gen_python = None
+    args.generate_python = None
+    args.no_generate_python_docstrings = False
+    args.generate_ctags = None
     return args
 
 
@@ -54,9 +56,9 @@ def test_generate_python_constants(tmp_path):
     content = output_path.read_text()
 
     assert "class MY:" in content
-    assert 'MyClass = ox.NamedNode(_BASE + "MyClass")' in content
-    assert 'myProperty = ox.NamedNode(_BASE + "myProperty")' in content
-    assert 'otherProp = ox.NamedNode(_BASE + "otherProp")' in content
+    assert 'MyClass: ox.NamedNode = ox.NamedNode(MY + "MyClass")' in content
+    assert 'myProperty: ox.NamedNode = ox.NamedNode(MY + "myProperty")' in content
+    assert 'otherProp: ox.NamedNode = ox.NamedNode(MY + "otherProp")' in content
     assert "import pyoxigraph as ox" in content
 
 
@@ -125,13 +127,13 @@ def test_generate_python_constants_nested_inventory(tmp_path):
     content = output_path.read_text()
     assert "class ROOT:" in content
     assert "class DEP:" in content
-    assert "RootClass =" in content
-    assert "DepClass =" in content
+    assert "RootClass: ox.NamedNode" in content
+    assert "DepClass: ox.NamedNode" in content
 
 
 def test_main_cli_gen_python(tmp_path, monkeypatch, mock_args):
     # Setup mocks
-    mock_args.gen_python = tmp_path / "schema.py"
+    mock_args.generate_python = tmp_path / "schema.py"
     mock_args.schema_inventory = tmp_path / "inventory.json"
 
     # Create rudimentary inventory
