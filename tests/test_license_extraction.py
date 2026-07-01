@@ -1,9 +1,11 @@
 """
 schematool.tests.test_license_extraction
 """
+
 import pytest
 from pathlib import Path
 from schematool.schematool import generate_python_constants
+
 
 def test_license_extraction(tmp_path):
     schema_dir = tmp_path / "schema"
@@ -26,7 +28,10 @@ def test_license_extraction(tmp_path):
     ttl_path.write_text(ttl_content)
 
     inventory = {
-        "my": {"url": "http://example.org/lic/", "sources": [{"path": "license_test.ttl"}]}
+        "my": {
+            "url": "http://example.org/lic/",
+            "sources": [{"path": "license_test.ttl"}],
+        }
     }
 
     output_path = tmp_path / "output_lic.py"
@@ -39,6 +44,7 @@ def test_license_extraction(tmp_path):
     assert "class MY:" in content
     assert "Ontology with license." in content
     assert "License: http://creativecommons.org/licenses/by/4.0/" in content
+
 
 def test_multiple_licenses(tmp_path):
     schema_dir = tmp_path / "schema"
@@ -62,7 +68,10 @@ def test_multiple_licenses(tmp_path):
     ttl_path.write_text(ttl_content)
 
     inventory = {
-        "my": {"url": "http://example.org/lic2/", "sources": [{"path": "license_multi.ttl"}]}
+        "my": {
+            "url": "http://example.org/lic2/",
+            "sources": [{"path": "license_multi.ttl"}],
+        }
     }
 
     output_path = tmp_path / "output_lic2.py"
@@ -73,4 +82,7 @@ def test_multiple_licenses(tmp_path):
     content = output_path.read_text()
 
     # Check that at least one is present, or both if we implement aggregation
-    assert "License: http://license1.org" in content or "License: http://license2.org" in content
+    assert (
+        "License: http://license1.org" in content
+        or "License: http://license2.org" in content
+    )

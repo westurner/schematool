@@ -1,6 +1,7 @@
 """
 schematool.tests.test_docstrings_formatting
 """
+
 import pytest
 from pathlib import Path
 from schematool.schematool import generate_python_constants

@@ -110,7 +110,9 @@ def save_inventory(path, inventory):
         logger.error(f"Failed to save inventory to {path}: {e}")
 
 
-def transform_rdf(input_path, output_path, target_format, use_pyoxigraph=False, extra_prefixes=None):
+def transform_rdf(
+    input_path, output_path, target_format, use_pyoxigraph=False, extra_prefixes=None
+):
     """Transform RDF from one format to another."""
     rdflib_map = {"ttl": "turtle", "rdfxml": "xml", "jsonld": "json-ld"}
 
@@ -149,10 +151,11 @@ def transform_rdf(input_path, output_path, target_format, use_pyoxigraph=False, 
     try:
         g = Graph()
         g.parse(str(input_path))
-        
-        # Bind additional prefixes from inventory to assist rdflib's strict QName splitting 
+
+        # Bind additional prefixes from inventory to assist rdflib's strict QName splitting
         # which otherwise fails on local names containing slashes.
         from rdflib import Namespace
+
         if extra_prefixes:
             for pfx, uri in extra_prefixes.items():
                 g.bind(pfx, Namespace(uri))
@@ -160,16 +163,39 @@ def transform_rdf(input_path, output_path, target_format, use_pyoxigraph=False, 
         if target_format == "compacted_jsonld" or target_format == "stripped_jsonld":
             if target_format == "stripped_jsonld":
                 from rdflib import URIRef
-                g.remove((None, URIRef("http://www.w3.org/2000/01/rdf-schema#isDefinedBy"), None))
-                g.remove((None, URIRef("https://spec.industrialontologies.org/ontology/annotation/adaptedFrom"), None))
-                g.remove((None, URIRef("https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/adaptedFrom"), None))
+
+                g.remove(
+                    (
+                        None,
+                        URIRef("http://www.w3.org/2000/01/rdf-schema#isDefinedBy"),
+                        None,
+                    )
+                )
+                g.remove(
+                    (
+                        None,
+                        URIRef(
+                            "https://spec.industrialontologies.org/ontology/annotation/adaptedFrom"
+                        ),
+                        None,
+                    )
+                )
+                g.remove(
+                    (
+                        None,
+                        URIRef(
+                            "https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/adaptedFrom"
+                        ),
+                        None,
+                    )
+                )
             g.serialize(
                 destination=str(output_path),
                 format="json-ld",
-                context={ (k if k else "@vocab"): str(v) for k, v in g.namespaces() },
+                context={(k if k else "@vocab"): str(v) for k, v in g.namespaces()},
             )
             return True
-            
+
         output_format = rdflib_map.get(target_format, target_format)
         if output_format:
             g.serialize(destination=str(output_path), format=output_format)
@@ -180,7 +206,9 @@ def transform_rdf(input_path, output_path, target_format, use_pyoxigraph=False, 
         return False
 
 
-def download_and_convert(prefix, base_url, source, schema_dir, reason="User requested", extra_prefixes=None):
+def download_and_convert(
+    prefix, base_url, source, schema_dir, reason="User requested", extra_prefixes=None
+):
     """
     Download a single source and convert it to Turtle if needed.
     'source' is a dict that MUST contain 'path' and may contain 'url', 'req_headers', etc.
@@ -370,7 +398,8 @@ def recursive_sync(
         visited_urls = set()
 
     target_formats = kwargs.get(
-        "target_formats", ["ttl", "rdfxml", "jsonld", "compacted_jsonld", "stripped_jsonld"]
+        "target_formats",
+        ["ttl", "rdfxml", "jsonld", "compacted_jsonld", "stripped_jsonld"],
     )
     use_pyoxigraph = kwargs.get("use_pyoxigraph", False)
     fmt_to_ext = {
@@ -420,7 +449,12 @@ def recursive_sync(
                     any_success = True
                 continue
             success = download_and_convert(
-                prefix, url, source, schema_dir, reason=reason, extra_prefixes=extra_prefixes
+                prefix,
+                url,
+                source,
+                schema_dir,
+                reason=reason,
+                extra_prefixes=extra_prefixes,
             )
             if success:
                 any_success = True
@@ -463,11 +497,15 @@ def recursive_sync(
                         schema_dir / new_path,
                         fmt,
                         use_pyoxigraph,
-                        extra_prefixes=extra_prefixes
+                        extra_prefixes=extra_prefixes,
                     ):
                         if str(new_path) not in existing_paths:
                             info["sources"].append(
-                                {"path": str(new_path), "format": fmt, "generated": True}
+                                {
+                                    "path": str(new_path),
+                                    "format": fmt,
+                                    "generated": True,
+                                }
                             )
                             existing_paths.add(str(new_path))
                         existing_exts.add(ext)
@@ -583,7 +621,9 @@ def update_docs(inventory, schema_dir, docs_vis_path):
         logger.error(f"Failed to write docs: {e}")
 
 
-def generate_python_constants(inventory, schema_dir, output_path, include_docstrings=True):
+def generate_python_constants(
+    inventory, schema_dir, output_path, include_docstrings=True
+):
     """
     Generate a Python module containing static class definitions for RDF vocabularies.
     This enables IDE support like autocomplete and type checking.
@@ -659,7 +699,8 @@ def generate_python_constants(inventory, schema_dir, output_path, include_docstr
                     def get_local_name_or_uri(uri_str):
                         if base_uri and uri_str.startswith(base_uri):
                             cand = uri_str[len(base_uri) :]
-                            if cand: return cand
+                            if cand:
+                                return cand
                         if "#" in uri_str:
                             return uri_str.split("#")[-1]
                         if "/" in uri_str:
@@ -673,11 +714,13 @@ def generate_python_constants(inventory, schema_dir, output_path, include_docstr
                         # 1. Get Description (rdfs:comment)
                         comments = []
                         for __, __, o in g.triples((s, RDFS.comment, None)):
-                             if o:
-                                 comments.append(str(o).strip())
+                            if o:
+                                comments.append(str(o).strip())
                         if comments:
                             # Join distinct comments
-                            docstring_parts.append(" ".join(sorted(set(comments), key=comments.index)))
+                            docstring_parts.append(
+                                " ".join(sorted(set(comments), key=comments.index))
+                            )
 
                         # 2. Get Labels (rdfs:label, skos:prefLabel)
                         labels = []
@@ -691,13 +734,16 @@ def generate_python_constants(inventory, schema_dir, output_path, include_docstr
                         # Try skos:prefLabel
                         # We need to use rdflib term if we are using rdflib Graph 'g'
                         from rdflib import URIRef
-                        SKOS_PREF_LABEL = URIRef("http://www.w3.org/2004/02/skos/core#prefLabel")
+
+                        SKOS_PREF_LABEL = URIRef(
+                            "http://www.w3.org/2004/02/skos/core#prefLabel"
+                        )
                         for __, __, o in g.triples((s, SKOS_PREF_LABEL, None)):
-                             if o:
-                                 val = str(o).strip()
-                                 if getattr(o, "language", None):
-                                     val = f"@{o.language}: {val}"
-                                 labels.append(val)
+                            if o:
+                                val = str(o).strip()
+                                if getattr(o, "language", None):
+                                    val = f"@{o.language}: {val}"
+                                labels.append(val)
 
                         if labels:
                             unique_labels = sorted(set(labels), key=labels.index)
@@ -712,12 +758,16 @@ def generate_python_constants(inventory, schema_dir, output_path, include_docstr
                             # Simple recursive hierarchy lookup (DFS)
                             # Limit depth to avoid cycles or deep recursion
                             def get_hierarchy(node, path=None, depth=0):
-                                if path is None: path = []
-                                if depth > 10: return path # Safety depth
+                                if path is None:
+                                    path = []
+                                if depth > 10:
+                                    return path  # Safety depth
 
                                 parents = list(g.objects(node, RDFS.subClassOf))
                                 # Filter only interesting parents (URIs)
-                                valid_parents = [p for p in parents if str(p).startswith("http")]
+                                valid_parents = [
+                                    p for p in parents if str(p).startswith("http")
+                                ]
 
                                 if not valid_parents:
                                     return path
@@ -730,9 +780,13 @@ def generate_python_constants(inventory, schema_dir, output_path, include_docstr
 
                                 # Prepend parent to path
                                 parent_name = get_local_name_or_uri(str(parent))
-                                return get_hierarchy(parent, [parent_name] + path, depth + 1)
+                                return get_hierarchy(
+                                    parent, [parent_name] + path, depth + 1
+                                )
 
-                            breadcrumbs = get_hierarchy(s, [get_local_name_or_uri(s_str)])
+                            breadcrumbs = get_hierarchy(
+                                s, [get_local_name_or_uri(s_str)]
+                            )
                             # We want the path to be: Parent > Child
                             # The function returns [ParentName, ..., CurrentName] check logic?
                             # Let's trace:
@@ -747,18 +801,29 @@ def generate_python_constants(inventory, schema_dir, output_path, include_docstr
                                 docstring_parts.append(f"- Hierarchy: {hierarchy_str}")
 
                         # 4. Domain and Range for properties
-                        if rdf_type in (RDF.Property, OWL.ObjectProperty, OWL.DatatypeProperty, OWL.AnnotationProperty):
+                        if rdf_type in (
+                            RDF.Property,
+                            OWL.ObjectProperty,
+                            OWL.DatatypeProperty,
+                            OWL.AnnotationProperty,
+                        ):
                             domains = []
                             for __, __, o in g.triples((s, RDFS.domain, None)):
-                                if o: domains.append(get_local_name_or_uri(str(o)))
+                                if o:
+                                    domains.append(get_local_name_or_uri(str(o)))
                             ranges = []
                             for __, __, o in g.triples((s, RDFS.range, None)):
-                                if o: ranges.append(get_local_name_or_uri(str(o)))
+                                if o:
+                                    ranges.append(get_local_name_or_uri(str(o)))
 
                             if domains:
-                                docstring_parts.append(f"- Domain: {', '.join(sorted(set(domains)))}")
+                                docstring_parts.append(
+                                    f"- Domain: {', '.join(sorted(set(domains)))}"
+                                )
                             if ranges:
-                                docstring_parts.append(f"- Range: {', '.join(sorted(set(ranges)))}")
+                                docstring_parts.append(
+                                    f"- Range: {', '.join(sorted(set(ranges)))}"
+                                )
 
                     # Combine parts
                     comment = None
@@ -779,15 +844,21 @@ def generate_python_constants(inventory, schema_dir, output_path, include_docstr
                     local = None
                     if base_uri and s_str.startswith(base_uri):
                         local_candidate = s_str[len(base_uri) :]
-                        if local_candidate and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", local_candidate):
+                        if local_candidate and re.match(
+                            r"^[a-zA-Z_][a-zA-Z0-9_]*$", local_candidate
+                        ):
                             local = local_candidate
                     elif "#" in s_str:
                         local_candidate = s_str.split("#")[-1]
-                        if local_candidate and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", local_candidate):
+                        if local_candidate and re.match(
+                            r"^[a-zA-Z_][a-zA-Z0-9_]*$", local_candidate
+                        ):
                             local = local_candidate
                     elif "/" in s_str:
                         local_candidate = s_str.split("/")[-1]
-                        if local_candidate and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", local_candidate):
+                        if local_candidate and re.match(
+                            r"^[a-zA-Z_][a-zA-Z0-9_]*$", local_candidate
+                        ):
                             local = local_candidate
 
                     if local:
@@ -812,70 +883,75 @@ def generate_python_constants(inventory, schema_dir, output_path, include_docstr
             ontology_doc = f"Constants for the {prefix} ontology."
 
             if include_docstrings:
-                 from rdflib import URIRef
-                 # Try to find description on the ontology resource
-                 ontology_node = None
-                 for s in g.subjects(RDF.type, OWL.Ontology):
-                     ontology_node = s
-                     # Prefer the one matching base uri if possible, but taking first is usually fine for single-file schemas
-                     if str(s) == base_uri.rstrip("#/"):
-                         break
-                     break # Just take the first one
+                from rdflib import URIRef
 
-                 if ontology_node:
-                     desc_candidates = []
-                     # Check rdfs:comment
-                     for o in g.objects(ontology_node, RDFS.comment):
-                         if o: desc_candidates.append(str(o).strip())
+                # Try to find description on the ontology resource
+                ontology_node = None
+                for s in g.subjects(RDF.type, OWL.Ontology):
+                    ontology_node = s
+                    # Prefer the one matching base uri if possible, but taking first is usually fine for single-file schemas
+                    if str(s) == base_uri.rstrip("#/"):
+                        break
+                    break  # Just take the first one
 
-                     # Check dc:description / dcterms:description
-                     for prop in [
-                         URIRef("http://purl.org/dc/terms/description"),
-                         URIRef("http://purl.org/dc/elements/1.1/description"),
-                         URIRef("http://www.w3.org/2004/02/skos/core#definition")
-                     ]:
-                         for o in g.objects(ontology_node, prop):
-                             if o:
-                                 desc_candidates.append(str(o).strip())
+                if ontology_node:
+                    desc_candidates = []
+                    # Check rdfs:comment
+                    for o in g.objects(ontology_node, RDFS.comment):
+                        if o:
+                            desc_candidates.append(str(o).strip())
 
-                     if desc_candidates:
-                         # Use the longest description found, usually the most complete one
-                         best_desc = max(desc_candidates, key=len)
-                         # Sanitize
-                         best_desc = best_desc.replace('"', "'")
-                         ontology_doc = f"{best_desc}\n\n    Constants for the {prefix} ontology."
+                    # Check dc:description / dcterms:description
+                    for prop in [
+                        URIRef("http://purl.org/dc/terms/description"),
+                        URIRef("http://purl.org/dc/elements/1.1/description"),
+                        URIRef("http://www.w3.org/2004/02/skos/core#definition"),
+                    ]:
+                        for o in g.objects(ontology_node, prop):
+                            if o:
+                                desc_candidates.append(str(o).strip())
 
-                     # Extract License
-                     licenses = []
-                     for prop in [
+                    if desc_candidates:
+                        # Use the longest description found, usually the most complete one
+                        best_desc = max(desc_candidates, key=len)
+                        # Sanitize
+                        best_desc = best_desc.replace('"', "'")
+                        ontology_doc = (
+                            f"{best_desc}\n\n    Constants for the {prefix} ontology."
+                        )
+
+                    # Extract License
+                    licenses = []
+                    for prop in [
                         URIRef("http://purl.org/dc/terms/license"),
                         URIRef("http://creativecommons.org/ns#license"),
                         URIRef("http://schema.org/license"),
                         URIRef("http://www.w3.org/1999/xhtml/vocab#license"),
-                        URIRef("http://usefulinc.com/ns/doap#license")
-                     ]:
-                         for o in g.objects(ontology_node, prop):
-                             if o: licenses.append(str(o).strip())
+                        URIRef("http://usefulinc.com/ns/doap#license"),
+                    ]:
+                        for o in g.objects(ontology_node, prop):
+                            if o:
+                                licenses.append(str(o).strip())
 
-                     if licenses:
-                         unique_licenses = sorted(set(licenses), key=licenses.index)
-                         license_str = ", ".join(unique_licenses)
-                         # Insert license info before the "Constants for..." suffix
-                         suffix = f"Constants for the {prefix} ontology."
-                         if ontology_doc.endswith(suffix):
-                             base_doc = ontology_doc[:-len(suffix)].rstrip()
-                             if base_doc:
-                                 ontology_doc = f"{base_doc}\n\n    License: {license_str}\n\n    {suffix}"
-                             else:
-                                 ontology_doc = f"License: {license_str}\n\n    {suffix}"
-                         else:
-                             ontology_doc += f"\n\n    License: {license_str}"
+                    if licenses:
+                        unique_licenses = sorted(set(licenses), key=licenses.index)
+                        license_str = ", ".join(unique_licenses)
+                        # Insert license info before the "Constants for..." suffix
+                        suffix = f"Constants for the {prefix} ontology."
+                        if ontology_doc.endswith(suffix):
+                            base_doc = ontology_doc[: -len(suffix)].rstrip()
+                            if base_doc:
+                                ontology_doc = f"{base_doc}\n\n    License: {license_str}\n\n    {suffix}"
+                            else:
+                                ontology_doc = f"License: {license_str}\n\n    {suffix}"
+                        else:
+                            ontology_doc += f"\n\n    License: {license_str}"
 
             class_def = [
                 f"class {safe_prefix}:",
                 f'    """{ontology_doc}"""',
                 f'    _BASE_URI = "{base_uri}"',
-                f'    {safe_prefix} = _BASE_URI',
+                f"    {safe_prefix} = _BASE_URI",
                 "",
             ]
 
@@ -901,7 +977,7 @@ def generate_python_constants(inventory, schema_dir, output_path, include_docstr
                     line = f'    {safe_term}: ox.NamedNode = ox.NamedNode({safe_prefix} + "{term}")'
                     class_def.append(line)
                     if comment:
-                         class_def.append(f'    """{comment}"""')
+                        class_def.append(f'    """{comment}"""')
 
             lines.extend(class_def)
             lines.append("")
@@ -918,7 +994,7 @@ def generate_python_constants(inventory, schema_dir, output_path, include_docstr
         logger.error(f"  [Error] Failed to write schema module: {e}")
 
 
-def generate_ctags(file_path, output_path='.'):
+def generate_ctags(file_path, output_path="."):
     """Run ctags on the generated python file."""
     try:
         logger.info(f"Running ctags on {file_path}...")
@@ -931,20 +1007,24 @@ def generate_ctags(file_path, output_path='.'):
         subprocess.run(["ctags", "--version"], check=True, capture_output=True)
 
         files = {}
-        files["u-ctags"] = Path(output_path) / 'tags'
-        files["json"] = Path(output_path) / 'ctags.json'
-        files["etags"] = Path(output_path) / 'etags'
+        files["u-ctags"] = Path(output_path) / "tags"
+        files["json"] = Path(output_path) / "ctags.json"
+        files["etags"] = Path(output_path) / "etags"
         files["xref"] = Path(output_path) / "tags.xml"
 
         formats = ["u-ctags", "json", "etags", "xref"]
 
         for format in formats:
-            subprocess.run([
+            subprocess.run(
+                [
                     "ctags",
-                    "-f", f'{files[format]}',
+                    "-f",
+                    f"{files[format]}",
                     f"--output-format={format}",
-                    str(file_path)],
-                check=True)
+                    str(file_path),
+                ],
+                check=True,
+            )
         logger.info(f"  [OK] Updated tags for {file_path}")
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         logger.warning(f"  [Warning] Failed to run ctags: {e}. Is ctags installed?")
@@ -955,7 +1035,6 @@ def main():
         description="Download external RDF schemas transitively and update markdown documentation per a schema inventory.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-
 
     parser.add_argument(
         "--generate-python",
@@ -980,7 +1059,6 @@ def main():
     parser.add_argument(
         "--no-docs", action="store_true", help="Skip updating Markdown documentation"
     )
-
 
     parser.add_argument(
         "--schema-inventory",
@@ -1079,7 +1157,7 @@ def main():
             load_inventory(inventory_path),
             schema_dir,
             resolve_path(args.generate_python),
-            include_docstrings=not args.no_generate_python_docstrings
+            include_docstrings=not args.no_generate_python_docstrings,
         )
         if args.generate_ctags:
             generate_ctags(resolve_path(args.generate_python))

@@ -1,6 +1,7 @@
 """
 schematool.tests.test_gen_ctags
 """
+
 import os
 import pytest
 import shutil

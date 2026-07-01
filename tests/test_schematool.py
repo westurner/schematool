@@ -592,8 +592,12 @@ def test_recursive_sync_compacted_jsonld_not_duplicated(tmp_path, monkeypatch):
         }
     }
 
-    recursive_sync(inventory, tmp_path, max_depth=0, target_formats=["compacted_jsonld"])
-    recursive_sync(inventory, tmp_path, max_depth=0, target_formats=["compacted_jsonld"])
+    recursive_sync(
+        inventory, tmp_path, max_depth=0, target_formats=["compacted_jsonld"]
+    )
+    recursive_sync(
+        inventory, tmp_path, max_depth=0, target_formats=["compacted_jsonld"]
+    )
 
     assert transform_calls == 0
     paths = [s["path"] for s in inventory["dcat"]["sources"]]
@@ -1079,6 +1083,7 @@ def test_generate_ctags_integration(tmp_path):
     finally:
         os.chdir(cwd)
 
+
 def test_transform_rdf_stripped_jsonld(tmp_path):
     from schematool.schematool import transform_rdf
     import json
@@ -1096,7 +1101,9 @@ ex:s rdfs:isDefinedBy <http://example.org/test> ;
 """)
 
     output_jsonld = tmp_path / "output.stripped.jsonld"
-    success = transform_rdf(input_ttl, output_jsonld, "stripped_jsonld", use_pyoxigraph=False)
+    success = transform_rdf(
+        input_ttl, output_jsonld, "stripped_jsonld", use_pyoxigraph=False
+    )
     assert success
     assert output_jsonld.exists()
 
